@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 )
@@ -12,9 +14,9 @@ func main() {
 	http.HandleFunc("/index", index)
 	http.HandleFunc("/upload", upload)
 
-	err := http.ListenAndServe(":8811", nil)
+	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
-		return
+		log.Println(err)
 	}
 }
 
@@ -22,24 +24,33 @@ func index(writer http.ResponseWriter, request *http.Request) {
 	writer.Header().Set("Content-Type", "text/html;charset=utf-8")
 	file, err := ioutil.ReadFile("./html/index.html")
 	if err != nil {
-		return
+		log.Println(err)
 	}
 	_, err = writer.Write(file)
 	if err != nil {
-		return
+		log.Println(err)
 	}
 }
 
 func upload(writer http.ResponseWriter, request *http.Request) {
 	// get image dstFile from form
-	pictureFile, fileHeader, err := request.FormFile("dstFile")
+	pictureFile, fileHeader, err := request.FormFile("upload_image")
 	if err != nil {
+		log.Println(err)
 		return
 	}
 	// upload path
-	uploadFullPath := "./upload/" + fileHeader.Filename
+	uploadPath := "uploadaaa"
+	uploadFullPath := uploadPath + fileHeader.Filename
+	if _, err := os.Stat(uploadPath); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(uploadPath, os.ModePerm)
+		if err != nil {
+			log.Println(err)
+		}
+	}
 	dstFile, err := os.Create(uploadFullPath)
 	if err != nil {
+		log.Println(err)
 		return
 	}
 	defer dstFile.Close()
