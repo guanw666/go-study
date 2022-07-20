@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"io"
 	"io/ioutil"
 	"log"
@@ -17,6 +16,7 @@ func main() {
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Println(err)
+		return
 	}
 }
 
@@ -25,40 +25,42 @@ func index(writer http.ResponseWriter, request *http.Request) {
 	file, err := ioutil.ReadFile("./html/index.html")
 	if err != nil {
 		log.Println(err)
+		return
 	}
 	_, err = writer.Write(file)
 	if err != nil {
 		log.Println(err)
+		return
 	}
 }
 
 func upload(writer http.ResponseWriter, request *http.Request) {
 	// get image dstFile from form
-	pictureFile, fileHeader, err := request.FormFile("upload_image")
+	pictureFile, fileHeader, err := request.FormFile("picture")
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	// upload path
-	uploadPath := "uploadaaa"
-	uploadFullPath := uploadPath + fileHeader.Filename
-	if _, err := os.Stat(uploadPath); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(uploadPath, os.ModePerm)
+	// create file
+	dstFile, err2 := os.Create("upload/" + fileHeader.Filename)
+	if err2 != nil {
+		log.Println(err)
+		return
+	}
+	// close file after return
+	defer func(dstFile *os.File) {
+		err := dstFile.Close()
 		if err != nil {
 			log.Println(err)
 		}
-	}
-	dstFile, err := os.Create(uploadFullPath)
+	}(dstFile)
+	// copy
+	_, err = io.Copy(dstFile, pictureFile)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	defer dstFile.Close()
-	// save
-	_, err = io.Copy(dstFile, pictureFile)
-	if err != nil {
-		return
-	}
+
 	//dstFile, err = ioutil.ReadFile("./img/Snipaste_2022-07-19_16-18-12.jpg")
 	//if err != nil {
 	//	return
